@@ -19,6 +19,7 @@ from game.prompt_helpers import (
 )
 from llm.base import LLMBase
 from schema import ActionCompletion, Conversation, Knowledge, Memory, Message
+from schema.memory import MemoryType
 
 
 class GenAgent:
@@ -41,6 +42,7 @@ class GenAgent:
     ):
         agent = cls(knowledge, llm_interface, memory)
         await agent._fill_memories()
+        await agent.plan()
         return agent
 
     async def _fill_memories(self):
@@ -135,7 +137,7 @@ class GenAgent:
         plan_steps = format_plan(completion.content)
 
         for step in plan_steps:
-            await self.add_memory(Memory(description=step)) 
+            await self.add_memory(Memory(description=step,type=MemoryType.plan)) 
 
 
     async def query(self, queries: List[str]) -> List[int]:

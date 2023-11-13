@@ -1,4 +1,5 @@
 from __future__ import annotations
+from enum import Enum
 
 from typing import List, Optional, Set
 
@@ -27,6 +28,8 @@ class GameStage(BaseModel):
     This is used to indicate the passage of time to the LLM.
     """
 
+    
+
 
 class MemoryConfig(BaseModel):
     max_memories: int = 1024
@@ -38,6 +41,11 @@ class MemoryConfig(BaseModel):
     """How many memories to return."""
 
 
+class MemoryType(str, Enum):
+    observation = 'observation'
+    reflection = 'reflection'
+    plan = 'plan'
+
 class Memory(BaseModel):
     importance: int = 0
     """ 
@@ -46,6 +54,7 @@ class Memory(BaseModel):
     """
 
     description: str
+    type: MemoryType = MemoryType.observation
     embedding: Optional[List[float]] = None
     timestamp: Optional[GameStage] = None
 
