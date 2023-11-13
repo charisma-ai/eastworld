@@ -7,7 +7,9 @@ memory that aids in grounding their behavior in the game world.
 """
 import json
 import sys
-sys.path.append('../../')
+
+# TODO: rethink this line
+# sys.path.append('../../')
 
 from utils import *
 from global_methods import *
