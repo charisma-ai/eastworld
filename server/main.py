@@ -21,6 +21,7 @@ from server.router import (
     llm_handlers,
     session_handlers,
     util_handlers,
+    game_tick
 )
 from server.typecheck_fighter import pipeline_exec
 from server.util.json_loader import load_games_from_path
@@ -131,3 +132,4 @@ app.include_router(game_def_handlers.router)
 app.include_router(agent_def_handlers.router)
 app.include_router(session_handlers.router)
 app.include_router(authorization_handlers.router)
+app.include_router(game_tick.router)

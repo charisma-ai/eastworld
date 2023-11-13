@@ -28,6 +28,7 @@ from server.context import (
     get_sessions,
 )
 from server.router.game_def_handlers import get_game_def
+from server.router.game_tick import start_game_tick_task
 from server.schema.debug import (
     ActionCompletionWithDebug,
     InteractWithDebug,
@@ -146,6 +147,8 @@ async def create_session(
     session = Session(uuid=uuid.uuid4(), game_def=game_def, agents=agents)
     sessions[session.uuid] = session
 
+    await start_game_tick_task(game_uuid, redis)
+
     return str(session.uuid)
 
 
@@ -229,7 +232,7 @@ async def chat(
     session_uuid: str,
     agent: str,
     message: str,
-    send_debug: bool = False,
+    send_debug: bool = True,
     sessions: SessionsType = Depends(get_sessions),
 ) -> MessageWithDebug:
     """Sends `message` to the given agent. They will respond with text.
@@ -268,7 +271,7 @@ async def interact(
     session_uuid: str,
     agent: str,
     message: str,
-    send_debug: bool = False,
+    send_debug: bool = True,
     sessions: SessionsType = Depends(get_sessions),
 ):
     """Sends message to the given agent. They will respond with
@@ -310,7 +313,7 @@ async def act(
     session_uuid: str,
     agent: str,
     message: Optional[str],
-    send_debug: bool = False,
+    send_debug: bool = True,
     sessions: SessionsType = Depends(get_sessions),
 ):
     """Asks the given agent to perform an action. Optionally
