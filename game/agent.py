@@ -19,7 +19,7 @@ from game.prompt_helpers import (
 )
 from llm.base import LLMBase
 from schema import ActionCompletion, Conversation, Knowledge, Memory, Message
-from schema.memory import MemoryType
+from schema.memory import GameStage, MemoryType
 
 
 class GenAgent:
@@ -69,12 +69,12 @@ class GenAgent:
         await self._memory.add_memory(memory)
 
     async def interact(
-        self, message: Optional[str]
+        self, message: Optional[str], current_stage: Optional[GameStage]
     ) -> Tuple[Union[Message, ActionCompletion], List[Message]]:
         if message:
             self._conversation_history.append(Message(role="user", content=message))
 
-        memories = await self._queryMemories(message)
+        memories = await self._queryMemories(message,current_stage)
 
         messages = get_interact_messages(
             self._knowledge,
@@ -206,19 +206,19 @@ class GenAgent:
         self._knowledge = knowledge
 
     async def _queryMemories(
-        self, message: Optional[str] = None, max_memories: Optional[int] = None
+        self, message: Optional[str] = None, timestamp:Optional[GameStage]=None, max_memories: Optional[int] = None
     ):
         if not max_memories:
             max_memories = self._conversation_context.memories_to_include
 
         queries: List[Memory] = []
         if message:
-            queries.append(Memory(description=message))
+            queries.append(Memory(description=message,timestamp=timestamp))
         context_description = (self._conversation_context.scene_description or "") + (
             self._conversation_context.instructions or ""
         )
         if context_description:
-            queries.append(Memory(description=context_description))
+            queries.append(Memory(description=context_description,timestamp=timestamp))
 
         return [
             memory.description
