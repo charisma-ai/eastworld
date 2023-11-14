@@ -9,6 +9,7 @@ from game.prompt_helpers import (
     generate_functions_from_actions,
     get_action_messages,
     get_chat_messages,
+    get_decompose_plan_message,
     get_guardrail_query,
     get_interact_messages,
     get_query_messages,
@@ -42,7 +43,7 @@ class GenAgent:
     ):
         agent = cls(knowledge, llm_interface, memory)
         await agent._fill_memories()
-        await agent.plan()
+        await agent.plan(timestamp=GameStage()) #call with initial timestamp
         return agent
 
     async def _fill_memories(self):
@@ -128,16 +129,32 @@ class GenAgent:
             messages,
         )
 
-    async def plan(self):
-        memories = await self._queryMemories(None)
+    async def plan(self, timestamp:GameStage, max_depth:int=1):
+        memories = await self._queryMemories(message=None,timestamp=timestamp)
 
-        message = get_broad_plan_message(self._knowledge,memories)
 
-        completion = await self._llm_interface.completion([message], [])
-        plan_steps = format_plan(completion.content)
+        message = None
+        if timestamp.minor == 0: # do broad plan after major is changed and minor set to zero
+            message = get_broad_plan_message(self._knowledge,memories,timestamp)
+        else:
+            current_step, level = self._memory.get_current_plan_step(timestamp)   
 
-        for step in plan_steps:
-            await self.add_memory(Memory(description=step,type=MemoryType.plan)) 
+            if level < max_depth:         
+                broad_plan = ""
+                for i, step in enumerate(self._memory.get_broad_plan()):
+                    broad_plan += f"{i}) {step.description}"
+                message = get_decompose_plan_message(broad_plan,current_step.value.description,self._knowledge,memories,timestamp)
+
+        if message is not None:
+            completion = await self._llm_interface.completion([message], [])
+            plan_steps = format_plan(completion.content)
+
+            for step in plan_steps:
+                print(step)
+                ts = GameStage.from_time(step["time"])
+                desc = step["step"]
+                
+                await self.add_memory(Memory(description=desc,type=MemoryType.plan,timestamp=ts))
 
 
     async def query(self, queries: List[str]) -> List[int]:

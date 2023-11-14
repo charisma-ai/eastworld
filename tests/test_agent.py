@@ -20,6 +20,7 @@ from schema import (
     Message,
     Parameter,
 )
+from schema.memory import MemoryType
 from tests.helpers import AsyncCopyingMock
 
 
@@ -113,9 +114,9 @@ async def test_interact():
 
     memories = [Memory(description="asdf")]
     memory.retrieve_relevant_memories.return_value = memories
-    await agent.interact("What's up?")
+    await agent.interact("What's up?",current_stage=GameStage())
 
-    llm.completion.assert_called_once_with(
+    llm.completion.assert_called_with(
         get_interact_messages(
             knowledge,
             Conversation(),
@@ -125,7 +126,7 @@ async def test_interact():
         generate_functions_from_actions(agent_def.actions),
     )
 
-    await agent.interact("Wtf?")
+    await agent.interact("Wtf?",current_stage=GameStage())
 
     llm.completion.assert_any_call(
         get_interact_messages(
@@ -145,7 +146,7 @@ async def test_interact():
         action="attack", args={"character": "Player"}
     )
 
-    resp, _ = await agent.interact("I will kill you!")
+    resp, _ = await agent.interact("I will kill you!",current_stage=GameStage())
     assert isinstance(resp, ActionCompletion)
     assert resp.action == "attack"
     assert resp.args["character"] == "Player"
@@ -266,17 +267,25 @@ async def test_plan():
         game_description="Game description", agent_def=agent_def, shared_lore=[]
     )
     agent = await GenAgent.create(knowledge, llm, memory)
+    
+    mock_completion = """
+1) {"time": "10:00am", "step": "go to Oak Hill College to take classes"}
+2) {"time": "1:00pm", "step": "work on his new music composition"}
+3) {"time": "5:30am", "step": "have dinner"}
+4) {"time": "11:00pm", "step": "finish school assignments and go to bed"}
+"""
+
     llm.completion.return_value = Message(
-        role="assistant", content="go to Oak Hill College to take classes at 10:00 am, 3) work on his new music composition from 1:00 pm to 5:00 pm, 4) have dinner at 5:30 pm, 5) finish school assignments and go to bed by 11:00 pm."
+        role="assistant", content=mock_completion
     )
  
-    await agent.plan()
+    await agent.plan(GameStage())
 
-    llm.completion.assert_called_once_with(
-        [get_broad_plan_message(knowledge,[])], 
+    llm.completion.assert_called_with(
+        [get_broad_plan_message(knowledge,[],GameStage())], 
         []             
     ) 
 
     memory.add_memory.assert_called_with(
-        Memory(description="Plan: finish school assignments and go to bed by 11:00 pm.")      
+        Memory(description="finish school assignments and go to bed",type=MemoryType.plan,timestamp=GameStage.from_time("11:00pm"))      
     )
