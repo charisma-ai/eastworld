@@ -11,8 +11,8 @@ import sys
 # TODO: rethink this line
 # sys.path.append('../../')
 
-from utils import *
-from global_methods import *
+# from utils import *
+from game.global_methods import *
 
 class MemoryTree: 
   def __init__(self, f_saved): 

@@ -69,3 +69,6 @@ class TIRetriever:
 
         self._memory_embeddings[len(self._memories) - 1] = memory.embedding
         self._memory_importances[len(self._memories) - 1] = memory.importance
+        
+    def get_all_memories(self) -> List[Memory]:
+        return self._memories

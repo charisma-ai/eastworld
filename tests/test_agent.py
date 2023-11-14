@@ -21,6 +21,8 @@ from schema import (
 )
 from tests.helpers import AsyncCopyingMock
 
+from schema.spatial_memory import MemoryTree
+
 
 def create_agent_def() -> AgentDef:
     move_ps = [

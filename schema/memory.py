@@ -48,6 +48,9 @@ class Memory(BaseModel):
     description: str
     embedding: Optional[List[float]] = None
     timestamp: Optional[GameStage] = None
+    
+    is_spatial_memory: bool = False
+    spatial_memory: Optional[Tuple] = ()
 
 
 class Lore(BaseModel):

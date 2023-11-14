@@ -19,6 +19,7 @@ from llm.base import LLMBase
 from schema import ActionCompletion, Conversation, Knowledge, Memory, Message
 
 from schema.spatial_memory import MemoryTree
+from game.maze import Maze
 
 
 class GenAgent:
@@ -37,7 +38,7 @@ class GenAgent:
         
         # TODO: Populate these properly:
         self.curr_tile = None
-        self.vision_r = None
+        self.vision_r = 8 # default used in Generative Agents
         self.att_bandwidth = 8 # default used in Generative Agents
         f_s_mem_saved = "spatial_memory/spatial_memory.json"
         
@@ -208,7 +209,10 @@ class GenAgent:
         queries: List[Memory] = []
         if message:
             queries.append(Memory(description=message))
-        context_description = (self._conversation_context.scene_description or "") + (
+        # context_description = (self._conversation_context.scene_description or "") + (
+        #     self._conversation_context.instructions or ""
+        # )
+        context_description = (str(self.perceive())) + (
             self._conversation_context.instructions or ""
         )
         if context_description:
@@ -221,7 +225,7 @@ class GenAgent:
             )
         ]
         
-    def perceive(self, maze: Maze):
+    async def perceive(self, maze: Maze):
         """
         Perceives events around the agent and saves it to the memory, both events 
         and spaces. 
@@ -315,66 +319,65 @@ class GenAgent:
             p_event = (s, p, o)
 
             # TODO: Replace this with a method that doesn't use Generative Agent's Associative Memory
-            # # We retrieve the latest self.retention events. If there is  
-            # # something new that is happening (that is, p_event not in latest_events),
-            # # then we add that event to the a_mem and return it. 
-            # latest_events = self.a_mem.get_summarized_latest_events(
-            #                                 self.retention)
-            # if p_event not in latest_events:
-            #     # We start by managing keywords. 
-            #     keywords = set()
-            #     sub = p_event[0]
-            #     obj = p_event[2]
-            #     if ":" in p_event[0]: 
-            #         sub = p_event[0].split(":")[-1]
-            #     if ":" in p_event[2]: 
-            #         obj = p_event[2].split(":")[-1]
-            #     keywords.update([sub, obj])
+            # We retrieve the latest self.retention events. If there is  
+            # something new that is happening (that is, p_event not in latest_events),
+            # then we add that event to the a_mem and return it. 
+            latest_events = self._memory.get_spatial_memories()
+            if p_event not in latest_events:
+                # We start by managing keywords. 
+                keywords = set()
+                sub = p_event[0]
+                obj = p_event[2]
+                if ":" in p_event[0]: 
+                    sub = p_event[0].split(":")[-1]
+                if ":" in p_event[2]: 
+                    obj = p_event[2].split(":")[-1]
+                keywords.update([sub, obj])
 
-            #     # Get event embedding
-            #     desc_embedding_in = desc
-            #     if "(" in desc: 
-            #         desc_embedding_in = (desc_embedding_in.split("(")[1]
-            #                                             .split(")")[0]
-            #                                             .strip())
-            #     if desc_embedding_in in self.a_mem.embeddings: 
-            #         event_embedding = self.a_mem.embeddings[desc_embedding_in]
-            #     else: 
-            #         event_embedding = get_embedding(desc_embedding_in)
-            #     event_embedding_pair = (desc_embedding_in, event_embedding)
+                # # Get event embedding
+                # desc_embedding_in = desc
+                # if "(" in desc: 
+                #     desc_embedding_in = (desc_embedding_in.split("(")[1]
+                #                                         .split(")")[0]
+                #                                         .strip())
+                # if desc_embedding_in in self.a_mem.embeddings: 
+                #     event_embedding = self.a_mem.embeddings[desc_embedding_in]
+                # else: 
+                #     event_embedding = get_embedding(desc_embedding_in)
+                # event_embedding_pair = (desc_embedding_in, event_embedding)
                 
-            #     # Get event poignancy. 
-            #     event_poignancy = generate_poig_score(self, 
-            #                                             "event", 
-            #                                             desc_embedding_in)
+                # # Get event poignancy. 
+                # event_poignancy = generate_poig_score(self, 
+                #                                         "event", 
+                #                                         desc_embedding_in)
 
-            #     # If we observe the agent's self chat, we include that in the memory
-            #     # of the agent here. 
-            #     chat_node_ids = []
-            #     if p_event[0] == f"{self.name}" and p_event[1] == "chat with": 
-            #         curr_event = self.act_event
-            #         if self.act_description in self.a_mem.embeddings: 
-            #             chat_embedding = self.a_mem.embeddings[
-            #                                 self.act_description]
-            #         else: 
-            #             chat_embedding = get_embedding(self
-            #                                                     .act_description)
-            #         chat_embedding_pair = (self.act_description, 
-            #                             chat_embedding)
-            #         chat_poignancy = generate_poig_score(self, "chat", 
-            #                                             self.act_description)
-            #         chat_node = self.a_mem.add_chat(self.curr_time, None,
-            #                     curr_event[0], curr_event[1], curr_event[2], 
-            #                     self.act_description, keywords, 
-            #                     chat_poignancy, chat_embedding_pair, 
-            #                     self.chat)
-            #         chat_node_ids = [chat_node.node_id]
+                # # If we observe the agent's self chat, we include that in the memory
+                # # of the agent here. 
+                # chat_node_ids = []
+                # if p_event[0] == f"{self.name}" and p_event[1] == "chat with": 
+                #     curr_event = self.act_event
+                #     if self.act_description in self.a_mem.embeddings: 
+                #         chat_embedding = self.a_mem.embeddings[
+                #                             self.act_description]
+                #     else: 
+                #         chat_embedding = get_embedding(self
+                #                                                 .act_description)
+                #     chat_embedding_pair = (self.act_description, 
+                #                         chat_embedding)
+                #     chat_poignancy = generate_poig_score(self, "chat", 
+                #                                         self.act_description)
+                #     chat_node = self.a_mem.add_chat(self.curr_time, None,
+                #                 curr_event[0], curr_event[1], curr_event[2], 
+                #                 self.act_description, keywords, 
+                #                 chat_poignancy, chat_embedding_pair, 
+                #                 self.chat)
+                #     chat_node_ids = [chat_node.node_id]
 
-            #     # Finally, we add the current event to the agent's memory. 
-            #     ret_events += [self.a_mem.add_event(self.curr_time, None,
-            #                         s, p, o, desc, keywords, event_poignancy, 
-            #                         event_embedding_pair, chat_node_ids)]
-            #     self.importance_trigger_curr -= event_poignancy
-            #     self.importance_ele_n += 1
+                # Finally, we add the current event to the agent's memory. 
+                memory_desc = ""
+                for i in p_event:
+                    memory_desc = memory_desc + str(i) + " "
+                self.add_memory(Memory(description=memory_desc, spatial_memory=p_event))
+                ret_events += [memory_desc]
 
         return ret_events

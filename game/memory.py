@@ -76,3 +76,13 @@ class GenAgentMemory:
             content=_MEM_IMPORTANCE_TMPL.format(memory_content=memory.description),
         )
         return (await self._llm_interface.digit_completions([[message]]))[0] + 1
+    
+    async def get_spatial_memories(self) -> List[Memory]:
+        memories = self._retriever.get_all_memories()
+        spatial_memories = []
+        
+        for memory in memories:
+            if memory.is_spatial_memory:
+                spatial_memories.append(memory.spatial_memory)
+                
+        return spatial_memories

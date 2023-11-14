@@ -12,8 +12,8 @@ import pickle
 import time
 import math
 
-from global_methods import *
-from utils import *
+from game.global_methods import *
+# from utils import *
 
 class Maze: 
   def __init__(self, maze_name): 
