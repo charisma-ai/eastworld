@@ -8,6 +8,7 @@ from game.prompt_helpers import (
     get_action_messages,
     get_chat_messages,
     get_interact_messages,
+    get_broad_plan_message
 )
 from schema import (
     Action,
@@ -19,6 +20,7 @@ from schema import (
     Message,
     Parameter,
 )
+from schema.memory import MemoryType
 from tests.helpers import AsyncCopyingMock
 
 
@@ -112,9 +114,9 @@ async def test_interact():
 
     memories = [Memory(description="asdf")]
     memory.retrieve_relevant_memories.return_value = memories
-    await agent.interact("What's up?")
+    await agent.interact("What's up?",current_stage=GameStage())
 
-    llm.completion.assert_called_once_with(
+    llm.completion.assert_called_with(
         get_interact_messages(
             knowledge,
             Conversation(),
@@ -124,7 +126,7 @@ async def test_interact():
         generate_functions_from_actions(agent_def.actions),
     )
 
-    await agent.interact("Wtf?")
+    await agent.interact("Wtf?",current_stage=GameStage())
 
     llm.completion.assert_any_call(
         get_interact_messages(
@@ -144,7 +146,7 @@ async def test_interact():
         action="attack", args={"character": "Player"}
     )
 
-    resp, _ = await agent.interact("I will kill you!")
+    resp, _ = await agent.interact("I will kill you!",current_stage=GameStage())
     assert isinstance(resp, ActionCompletion)
     assert resp.action == "attack"
     assert resp.args["character"] == "Player"
@@ -249,3 +251,41 @@ async def test_act():
     assert isinstance(resp, ActionCompletion)
     assert resp.action == "attack"
     assert resp.args["character"] == "Player"
+
+
+async def test_plan():
+    memory: Any = AsyncMock()
+    llm: Any = AsyncMock()
+    # TODO: this is here because the assert() compares the reference, which gets mutated
+    # after; Can we remove this?
+    llm.completion = AsyncCopyingMock()
+    memory.add_memory = AsyncCopyingMock()
+
+    agent_def = create_agent_def()
+
+    knowledge = Knowledge(
+        game_description="Game description", agent_def=agent_def, shared_lore=[]
+    )
+    agent = await GenAgent.create(knowledge, llm, memory)
+    
+    mock_completion = """
+1) {"time": "10:00am", "step": "go to Oak Hill College to take classes"}
+2) {"time": "1:00pm", "step": "work on his new music composition"}
+3) {"time": "5:30am", "step": "have dinner"}
+4) {"time": "11:00pm", "step": "finish school assignments and go to bed"}
+"""
+
+    llm.completion.return_value = Message(
+        role="assistant", content=mock_completion
+    )
+ 
+    await agent.plan(GameStage())
+
+    llm.completion.assert_called_with(
+        [get_broad_plan_message(knowledge,[],GameStage())], 
+        []             
+    ) 
+
+    memory.add_memory.assert_called_with(
+        Memory(description="finish school assignments and go to bed",type=MemoryType.plan,timestamp=GameStage.from_time("11:00pm"))      
+    )

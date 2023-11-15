@@ -9,14 +9,18 @@ from game.prompt_helpers import (
     generate_functions_from_actions,
     get_action_messages,
     get_chat_messages,
+    get_decompose_plan_message,
     get_guardrail_query,
     get_interact_messages,
     get_query_messages,
     get_rate_function,
     rating_to_int,
+    get_broad_plan_message,
+    format_plan
 )
 from llm.base import LLMBase
 from schema import ActionCompletion, Conversation, Knowledge, Memory, Message
+from schema.memory import GameStage, MemoryType
 
 
 class GenAgent:
@@ -39,6 +43,7 @@ class GenAgent:
     ):
         agent = cls(knowledge, llm_interface, memory)
         await agent._fill_memories()
+        await agent.plan(timestamp=GameStage()) #call with initial timestamp
         return agent
 
     async def _fill_memories(self):
@@ -65,12 +70,12 @@ class GenAgent:
         await self._memory.add_memory(memory)
 
     async def interact(
-        self, message: Optional[str]
+        self, message: Optional[str], current_stage: Optional[GameStage]
     ) -> Tuple[Union[Message, ActionCompletion], List[Message]]:
         if message:
             self._conversation_history.append(Message(role="user", content=message))
 
-        memories = await self._queryMemories(message)
+        memories = await self._queryMemories(message,current_stage)
 
         messages = get_interact_messages(
             self._knowledge,
@@ -123,6 +128,34 @@ class GenAgent:
             await self._llm_interface.action_completion(messages, functions),
             messages,
         )
+
+    async def plan(self, timestamp:GameStage, max_depth:int=1):
+        memories = await self._queryMemories(message=None,timestamp=timestamp)
+
+
+        message = None
+        if timestamp.minor == 0: # do broad plan after major is changed and minor set to zero
+            message = get_broad_plan_message(self._knowledge,memories,timestamp)
+        else:
+            current_step, level = self._memory.get_current_plan_step(timestamp)   
+
+            if level < max_depth:         
+                broad_plan = ""
+                for i, step in enumerate(self._memory.get_broad_plan()):
+                    broad_plan += f"{i}) {step.description}"
+                message = get_decompose_plan_message(broad_plan,current_step.value.description,self._knowledge,memories,timestamp)
+
+        if message is not None:
+            completion = await self._llm_interface.completion([message], [])
+            plan_steps = format_plan(completion.content)
+
+            for step in plan_steps:
+                print(step)
+                ts = GameStage.from_time(step["time"])
+                desc = step["step"]
+                
+                await self.add_memory(Memory(description=desc,type=MemoryType.plan,timestamp=ts))
+
 
     async def query(self, queries: List[str]) -> List[int]:
         """Returns a numerical answer to queries into the Agent's
@@ -190,19 +223,19 @@ class GenAgent:
         self._knowledge = knowledge
 
     async def _queryMemories(
-        self, message: Optional[str] = None, max_memories: Optional[int] = None
+        self, message: Optional[str] = None, timestamp:Optional[GameStage]=None, max_memories: Optional[int] = None
     ):
         if not max_memories:
             max_memories = self._conversation_context.memories_to_include
 
         queries: List[Memory] = []
         if message:
-            queries.append(Memory(description=message))
+            queries.append(Memory(description=message,timestamp=timestamp))
         context_description = (self._conversation_context.scene_description or "") + (
             self._conversation_context.instructions or ""
         )
         if context_description:
-            queries.append(Memory(description=context_description))
+            queries.append(Memory(description=context_description,timestamp=timestamp))
 
         return [
             memory.description

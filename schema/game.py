@@ -4,7 +4,7 @@ from typing import List, Literal, Optional
 from pydantic import UUID4, BaseModel, Field
 
 from schema.agent import AgentDef
-from schema.memory import Lore
+from schema.memory import GameStage, Lore
 
 
 class Message(BaseModel):
@@ -50,6 +50,8 @@ class GameDef(BaseModel):
 
     shared_lore: List[Lore] = Field(default_factory=list)
     """Lore/events/memories that more than one characters remember."""
+
+    current_stage: GameStage = Field(default_factory=GameStage)
 
     # TODO: add communities
     # communities:
