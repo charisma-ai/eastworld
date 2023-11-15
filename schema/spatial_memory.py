@@ -110,12 +110,12 @@ class MemoryTree:
     return x
 
 
-if __name__ == '__main__':
-  x = f"../../../../environment/frontend_server/storage/the_ville_base_LinFamily/personas/Eddy Lin/bootstrap_memory/spatial_memory.json"
-  x = MemoryTree(x)
-  x.print_tree()
+# if __name__ == '__main__':
+#   x = f"../../../../environment/frontend_server/storage/the_ville_base_LinFamily/personas/Eddy Lin/bootstrap_memory/spatial_memory.json"
+#   x = MemoryTree(x)
+#   x.print_tree()
 
-  print (x.get_str_accessible_sector_arenas("dolores double studio:double studio"))
+#   print (x.get_str_accessible_sector_arenas("dolores double studio:double studio"))
 
 
 

@@ -77,7 +77,7 @@ class GenAgentMemory:
         )
         return (await self._llm_interface.digit_completions([[message]]))[0] + 1
     
-    async def get_spatial_memories(self) -> List[Memory]:
+    def get_spatial_memories(self) -> List[Memory]:
         memories = self._retriever.get_all_memories()
         spatial_memories = []
         
@@ -86,3 +86,6 @@ class GenAgentMemory:
                 spatial_memories.append(memory.spatial_memory)
                 
         return spatial_memories
+    
+    def get_all_memories(self) -> List[Memory]:
+        return self._retriever.get_all_memories()

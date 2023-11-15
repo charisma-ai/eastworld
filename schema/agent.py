@@ -7,7 +7,7 @@ from pydantic import UUID4, BaseModel, Field
 
 from schema.memory import Lore, Memory
 
-from schema.spatial_memory import MemoryTree
+from schema.spatial_memory import *
 
 # class BaseModel(BaseModel):
 #     class Config:

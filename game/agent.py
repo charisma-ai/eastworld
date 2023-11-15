@@ -18,9 +18,16 @@ from game.prompt_helpers import (
 from llm.base import LLMBase
 from schema import ActionCompletion, Conversation, Knowledge, Memory, Message
 
+import logging
+logger=logging.getLogger()
+
 from schema.spatial_memory import MemoryTree
 from game.maze import Maze
+import math
+from operator import itemgetter
 
+#TODO: NOTICE: This is for test purposes only. Real solution needed!
+maze = Maze("test_maze")
 
 class GenAgent:
     def __init__(
@@ -37,10 +44,10 @@ class GenAgent:
         self._conversation_context = Conversation()
         
         # TODO: Populate these properly:
-        self.curr_tile = None
+        self.curr_tile = [73,14]
         self.vision_r = 8 # default used in Generative Agents
         self.att_bandwidth = 8 # default used in Generative Agents
-        f_s_mem_saved = "spatial_memory/spatial_memory.json"
+        f_s_mem_saved = "spatial_memory.json"
         
         self._knowledge.spatial_memory = MemoryTree(f_s_mem_saved)
 
@@ -59,7 +66,7 @@ class GenAgent:
             if self._knowledge.agent_def.uuid in lore.known_by
         ]
 
-        initial_memories += self._knowledge.agent_def.selfl_lore
+        initial_memories += self._knowledge.agent_def.personal_lore
 
         awaitables = [self._memory.add_memory(memory) for memory in initial_memories]
         await asyncio.gather(*awaitables)
@@ -89,6 +96,12 @@ class GenAgent:
             memories,
             self._conversation_history,
         )
+        
+        # with open("debugging_text_file.txt", "a+") as f:
+        #     f.write(str(messages) + "\n")
+        
+        # logger.debug(messages)
+        
         functions = generate_functions_from_actions(self._knowledge.agent_def.actions)
         completion = await self._llm_interface.completion(messages, functions)
 
@@ -108,6 +121,11 @@ class GenAgent:
             memories,
             self._conversation_history,
         )
+        
+        # with open("debugging_text_file.txt", "a+") as f:
+        #     f.write(str(messages) + "\n")
+        
+        # logger.debug(messages)
 
         completion = await self._llm_interface.chat_completion(messages)
 
@@ -212,7 +230,7 @@ class GenAgent:
         # context_description = (self._conversation_context.scene_description or "") + (
         #     self._conversation_context.instructions or ""
         # )
-        context_description = (str(self.perceive())) + (
+        context_description = (str(await self.perceive(maze))) + (
             self._conversation_context.instructions or ""
         )
         if context_description:
@@ -242,9 +260,11 @@ class GenAgent:
         OUTPUT: 
             ret_events: a list of <ConceptNode> that are perceived and new. 
         """
+        logger.debug("PERCEIVING")
         # PERCEIVE SPACE
         # We get the nearby tiles given our current tile and the agent's vision
         # radius. 
+        self.curr_tile = [73,14]
         nearby_tiles = maze.get_nearby_tiles(self.curr_tile, 
                                             self.vision_r)
 
@@ -377,7 +397,14 @@ class GenAgent:
                 memory_desc = ""
                 for i in p_event:
                     memory_desc = memory_desc + str(i) + " "
-                self.add_memory(Memory(description=memory_desc, spatial_memory=p_event))
+                await self.add_memory(Memory(description=memory_desc, is_spatial_memory=True, spatial_memory=p_event))
+                
+                # all_memories = self._memory.get_all_memories()
+                # with open("debugging_text_file.txt", "a+") as f:
+                #     f.write(str(all_memories) + "\n")
+                
+                # logger.debug(all_memories)
+                
                 ret_events += [memory_desc]
 
         return ret_events

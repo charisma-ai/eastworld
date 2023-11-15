@@ -22,6 +22,10 @@ from schema import (
 from tests.helpers import AsyncCopyingMock
 
 from schema.spatial_memory import MemoryTree
+from game.maze import Maze
+
+#TODO: NOTICE: This is for test purposes only. Real solution needed!
+maze = Maze("test_maze")
 
 
 def create_agent_def() -> AgentDef:
