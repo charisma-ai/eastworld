@@ -1,4 +1,5 @@
 import asyncio
+import pickle
 import uuid
 from configparser import ConfigParser
 from typing import Awaitable, List, Optional
@@ -28,6 +29,7 @@ from server.context import (
     get_sessions,
 )
 from server.router.game_def_handlers import get_game_def
+from server.router.game_tick import start_game_tick_task
 from server.schema.debug import (
     ActionCompletionWithDebug,
     InteractWithDebug,
@@ -36,6 +38,10 @@ from server.schema.debug import (
 from server.security.auth import authenticate
 from server.typecheck_fighter import RedisType
 from server.util.rate_limit import rate_limiter
+import logging
+
+logger = logging.getLogger()
+
 
 from schema.spatial_memory import MemoryTree
 
@@ -149,6 +155,12 @@ async def create_session(
     session = Session(uuid=uuid.uuid4(), game_def=game_def, agents=agents)
     sessions[session.uuid] = session
 
+    dev_mode = True
+    if dev_mode:
+        await redis.set("sessions", pickle.dumps(sessions))
+
+    await start_game_tick_task(game_uuid, session, redis)
+
     return str(session.uuid)
 
 
@@ -232,7 +244,7 @@ async def chat(
     session_uuid: str,
     agent: str,
     message: str,
-    send_debug: bool = False,
+    send_debug: bool = True,
     sessions: SessionsType = Depends(get_sessions),
 ) -> MessageWithDebug:
     """Sends `message` to the given agent. They will respond with text.
@@ -271,7 +283,7 @@ async def interact(
     session_uuid: str,
     agent: str,
     message: str,
-    send_debug: bool = False,
+    send_debug: bool = True,
     sessions: SessionsType = Depends(get_sessions),
 ):
     """Sends message to the given agent. They will respond with
@@ -292,8 +304,11 @@ async def interact(
     """
     session = sessions[UUID4(session_uuid)]
     gen_agent = get_gen_agent(agent, session)
+    
+    current_stage = session.game_def.current_stage
+    logger.info(current_stage)
 
-    response, debug = await gen_agent.interact(message)
+    response, debug = await gen_agent.interact(message,current_stage)
 
     response_with_debug = InteractWithDebug(response=response)
 
@@ -313,7 +328,7 @@ async def act(
     session_uuid: str,
     agent: str,
     message: Optional[str],
-    send_debug: bool = False,
+    send_debug: bool = True,
     sessions: SessionsType = Depends(get_sessions),
 ):
     """Asks the given agent to perform an action. Optionally
@@ -333,6 +348,9 @@ async def act(
     """
     session = sessions[UUID4(session_uuid)]
     gen_agent = get_gen_agent(agent, session)
+
+    current_stage = session.game_def.current_stage
+    logger.info(current_stage)
 
     action, debug = await gen_agent.act(message)
     action_with_debug = ActionCompletionWithDebug(action=action)

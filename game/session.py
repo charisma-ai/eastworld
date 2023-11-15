@@ -12,3 +12,4 @@ class Session:
     uuid: UUID4
     game_def: GameDef
     agents: List[GenAgent]
+    is_ticking: bool = False

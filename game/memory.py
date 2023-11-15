@@ -1,11 +1,12 @@
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from game.ti_retriever import TIRetriever
 from llm.base import LLMBase
 
 # from eastworld.wrappers.openai
 from schema import Memory, Message
+from schema.memory import GameStage, PlanTree
 
 _MEM_IMPORTANCE_TMPL = """On the scale of 0 to 9, where 0 is purely mundane"
 (e.g., brushing teeth, making bed) and 9 is
@@ -15,7 +16,6 @@ following piece of memory. Respond with a single integer without
 explanation.
 \nMemory: {memory_content}
 \nRating: """
-
 
 class GenAgentMemory:
     # TODO: make LLM configurable
@@ -28,6 +28,24 @@ class GenAgentMemory:
         self._llm_interface = llm_interface
         self._default_num_memories_returned = default_num_memories_returned
         self._retriever = retriever
+        self._plan = PlanTree()
+        self._current_plan_step = None
+
+    async def get_broad_plan(self) -> List[Memory]:        
+        return [step.value for step in self._plan.children if step.value]
+
+    async def get_current_plan_step(self, timestamp: GameStage) -> Tuple[PlanTree, int]:
+
+        def _traverse_tree(plan:PlanTree, level:int=0) -> Tuple[PlanTree, int]:
+            if len(plan.children) != 0:
+                for step in plan.children[::-1]:
+                    if step.value and timestamp < step.value.timestamp:
+                        return _traverse_tree(step,level=level+1)
+            return plan, level
+
+        plan_step, level = _traverse_tree(self._plan)
+        return plan_step, level
+        
 
     async def add_memory(self, memory: Memory) -> None:
         # TODO: parallelize

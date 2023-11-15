@@ -21,6 +21,7 @@ from server.router import (
     llm_handlers,
     session_handlers,
     util_handlers,
+    game_tick
 )
 from server.typecheck_fighter import pipeline_exec
 from server.util.json_loader import load_games_from_path
@@ -74,6 +75,9 @@ async def lifespan(app: FastAPI):
         resp = await redis_client.get("sessions")
         if resp:
             sessions = pickle.loads(resp)
+            for sess in sessions.values():
+                await game_tick.start_game_tick_task(str(sess.game_def.uuid),sess,redis_client)
+
         game_defs = load_existing_game_defs_from_json(
             parser.get("server", "game_defs_path", fallback="")
         )
@@ -93,6 +97,8 @@ async def lifespan(app: FastAPI):
     }
 
     if dev_mode:
+        for sess in sessions.values():
+            sess.is_ticking = False
         await redis_client.set("sessions", pickle.dumps(sessions))
 
     await redis_client.close()
@@ -131,3 +137,4 @@ app.include_router(game_def_handlers.router)
 app.include_router(agent_def_handlers.router)
 app.include_router(session_handlers.router)
 app.include_router(authorization_handlers.router)
+app.include_router(game_tick.router)
