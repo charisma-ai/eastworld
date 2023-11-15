@@ -7,6 +7,11 @@ from pydantic import UUID4, BaseModel, Field
 
 from schema.memory import Lore, Memory
 
+from schema.spatial_memory import *
+
+# class BaseModel(BaseModel):
+#     class Config:
+#         arbitrary_types_allowed = True
 
 class Parameter(BaseModel):
     name: str = Field(..., regex="^[a-zA-Z0-9_-]{1,64}$")
@@ -62,6 +67,10 @@ class AgentDef(BaseModel):
 
 
 class Knowledge(BaseModel):
+    class Config:
+        arbitrary_types_allowed = True
+    
     game_description: str
     shared_lore: List[Lore]
     agent_def: AgentDef
+    spatial_memory: MemoryTree

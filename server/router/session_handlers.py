@@ -43,6 +43,8 @@ import logging
 logger = logging.getLogger()
 
 
+from schema.spatial_memory import MemoryTree
+
 router = APIRouter(prefix="/session", tags=["Game Sessions"])
 
 
@@ -138,6 +140,7 @@ async def create_session(
             game_description=game_def.description,
             agent_def=agent_def,
             shared_lore=game_def.shared_lore,
+            spatial_memory=MemoryTree("spatial_memory.json"),
         )
 
         memory = GenAgentMemory(
@@ -467,5 +470,6 @@ async def updateSessions(
                     game_description=updated_game.description,
                     agent_def=matching_agent_def,
                     shared_lore=updated_game.shared_lore,
+                    spatial_memory=MemoryTree("spatial_memory.json"),
                 )
                 gen_agent.updateKnowledge(knowledge)

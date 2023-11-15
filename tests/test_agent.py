@@ -23,6 +23,12 @@ from schema import (
 from schema.memory import MemoryType
 from tests.helpers import AsyncCopyingMock
 
+from schema.spatial_memory import MemoryTree
+from game.maze import Maze
+
+#TODO: NOTICE: This is for test purposes only. Real solution needed!
+maze = Maze("test_maze")
+
 
 def create_agent_def() -> AgentDef:
     move_ps = [
@@ -77,6 +83,7 @@ async def test_add_memory():
         game_description="Game description",
         agent_def=agent_def,
         shared_lore=[lore1, lore2],
+        spatial_memory=MemoryTree("spatial_memory.json"),
     )
 
     agent = await GenAgent.create(knowledge, llm, memory)
@@ -105,7 +112,7 @@ async def test_interact():
     agent_def = create_agent_def()
 
     knowledge = Knowledge(
-        game_description="Game description", agent_def=agent_def, shared_lore=[]
+        game_description="Game description", agent_def=agent_def, shared_lore=[], spatial_memory=MemoryTree("spatial_memory.json")
     )
     agent = await GenAgent.create(knowledge, llm, memory)
     llm.completion.return_value = Message(
@@ -162,7 +169,7 @@ async def test_chat():
     agent_def = create_agent_def()
 
     knowledge = Knowledge(
-        game_description="Game description", agent_def=agent_def, shared_lore=[]
+        game_description="Game description", agent_def=agent_def, shared_lore=[], spatial_memory=MemoryTree("spatial_memory.json")
     )
     agent = await GenAgent.create(knowledge, llm, memory)
     llm.chat_completion.return_value = Message(
@@ -223,7 +230,7 @@ async def test_act():
     agent_def = create_agent_def()
 
     knowledge = Knowledge(
-        game_description="Game description", agent_def=agent_def, shared_lore=[]
+        game_description="Game description", agent_def=agent_def, shared_lore=[], spatial_memory=MemoryTree("spatial_memory.json")
     )
     agent = await GenAgent.create(knowledge, llm, memory)
 

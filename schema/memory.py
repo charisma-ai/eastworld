@@ -1,7 +1,7 @@
 from __future__ import annotations
 from enum import Enum
 
-from typing import List, Optional, Set
+from typing import List, Optional, Set, Tuple
 
 from pydantic import UUID4, BaseModel, Field
 import datetime
@@ -85,6 +85,9 @@ class Memory(BaseModel):
     type: MemoryType = MemoryType.observation
     embedding: Optional[List[float]] = None
     timestamp: Optional[GameStage] = None
+    
+    is_spatial_memory: bool = False
+    spatial_memory: Optional[Tuple] = ()
 
 
 class Lore(BaseModel):
