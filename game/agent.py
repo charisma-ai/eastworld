@@ -264,7 +264,7 @@ class GenAgent:
         #     self._conversation_context.instructions or ""
         # )
         context_description = (str(await self.perceive(maze))) + (
-            queries.append(Memory(description=message,timestamp=timestamp))
+            queries.append(Memory(description=message,timestamp=timestamp)))
         
         if context_description:
             queries.append(Memory(description=context_description,timestamp=timestamp))
