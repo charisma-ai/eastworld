@@ -12,14 +12,23 @@ from schema import GameStage, Memory, MemoryConfig
 # Memories of importance < 7 are lost when game stages are returned
 # Major memories are used to weight importance
 # Minor memories are more used to represent the passing of time
-def time_weighted_importance(
-    current_time: Optional[GameStage], memory: Memory
-) -> float:
+def time_weighted_importance(current_time: Optional[GameStage], memory: Memory) -> float:
     if not current_time or not memory.timestamp:
         return 0
+
+    diff = current_time.minor - memory.timestamp.minor
+
+    # Handle negative differences
+    if diff < 0:
+        diff = 0
+    else:
+        #TODO: Set the maximum value to something reasonable
+        diff = min(100, diff)
+
     importance = 0.5 ** (current_time.stage - memory.timestamp.stage + 1)
     importance += 0.4 * 0.8 ** (current_time.major - memory.timestamp.major)
-    importance += 0.1 * 0.9 ** (current_time.minor - memory.timestamp.minor)
+    importance += 0.1 * 0.9 ** diff
+
     return importance
 
 
