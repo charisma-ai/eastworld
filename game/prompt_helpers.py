@@ -371,14 +371,14 @@ List the subtasks when you are doing: {plan_task}
     return Message(role="system", content=full_prompt)
 
 
-def format_plan(plan_completion:str):
-    def is_json(maybe_json):
+def is_json(maybe_json):
         try:
             json.loads(maybe_json)
             return True
         except json.JSONDecodeError:
             return False
-
+        
+def format_plan(plan_completion:str):
     if isinstance(plan_completion,str):        
         steps = re.split(r"\d+\)",plan_completion.strip())        
         return [json.loads(step) for step in steps if step.strip() and is_json(step.strip())]            
