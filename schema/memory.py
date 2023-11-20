@@ -73,6 +73,7 @@ class MemoryType(str, Enum):
     observation = 'observation'
     reflection = 'reflection'
     plan = 'plan'
+    spatial = 'spatial'
 
 class Memory(BaseModel):
     importance: int = 0
@@ -85,8 +86,7 @@ class Memory(BaseModel):
     type: MemoryType = MemoryType.observation
     embedding: Optional[List[float]] = None
     timestamp: Optional[GameStage] = None
-    
-    is_spatial_memory: bool = False
+        
     spatial_memory: Optional[Tuple] = ()
 
 

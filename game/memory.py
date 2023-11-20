@@ -6,7 +6,7 @@ from llm.base import LLMBase
 
 # from eastworld.wrappers.openai
 from schema import Memory, Message
-from schema.memory import GameStage, PlanTree
+from schema.memory import GameStage, MemoryType, PlanTree
 
 _MEM_IMPORTANCE_TMPL = """On the scale of 0 to 9, where 0 is purely mundane"
 (e.g., brushing teeth, making bed) and 9 is
@@ -100,7 +100,7 @@ class GenAgentMemory:
         spatial_memories = []
         
         for memory in memories:
-            if memory.is_spatial_memory:
+            if memory.type == MemoryType.spatial:
                 spatial_memories.append(memory.spatial_memory)
                 
         return spatial_memories

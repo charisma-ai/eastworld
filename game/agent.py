@@ -436,7 +436,7 @@ class GenAgent:
                 memory_desc = ""
                 for i in p_event:
                     memory_desc = memory_desc + str(i) + " "
-                await self.add_memory(Memory(description=memory_desc, is_spatial_memory=True, spatial_memory=p_event))
+                await self.add_memory(Memory(description=memory_desc, type = MemoryType.spatial, spatial_memory=p_event))
                 
                 # all_memories = self._memory.get_all_memories()
                 # with open("debugging_text_file.txt", "a+") as f:
