@@ -30,9 +30,6 @@ from game.maze import Maze
 import math
 from operator import itemgetter
 
-#TODO: NOTICE: This is for test purposes only. Real solution needed!
-maze = Maze("test_maze")
-
 class GenAgent:
     def __init__(
         self,
@@ -252,7 +249,10 @@ class GenAgent:
         self._knowledge = knowledge
 
     async def _queryMemories(
-        self, message: Optional[str] = None, timestamp:Optional[GameStage]=None, max_memories: Optional[int] = None
+        self, message: Optional[str] = None,
+        timestamp:Optional[GameStage]=None,
+        max_memories: Optional[int] = None,
+        maze: Optional[Maze] = None
     ):
         if not max_memories:
             max_memories = self._conversation_context.memories_to_include
@@ -263,7 +263,12 @@ class GenAgent:
         # context_description = (self._conversation_context.scene_description or "") + (
         #     self._conversation_context.instructions or ""
         # )
-        context_description = (str(await self.perceive(maze))) + (
+
+        perception = ""
+        if maze:
+            perception = str(await self.perceive(maze))
+
+        context_description = perception + (
             self._conversation_context.instructions or ""
         )
         

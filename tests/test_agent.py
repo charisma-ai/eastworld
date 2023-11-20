@@ -271,7 +271,7 @@ async def test_plan():
     agent_def = create_agent_def()
 
     knowledge = Knowledge(
-        game_description="Game description", agent_def=agent_def, shared_lore=[]
+        game_description="Game description", agent_def=agent_def, shared_lore=[],spatial_memory=MemoryTree("spatial_memory.json")
     )
     agent = await GenAgent.create(knowledge, llm, memory)
     
