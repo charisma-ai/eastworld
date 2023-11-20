@@ -162,25 +162,25 @@ class GenAgent:
         message = None
         if timestamp.minor == 0: # do broad plan after major is changed and minor set to zero
             message = get_broad_plan_message(self._knowledge,memories,timestamp)
+            parent_plan = self._memory._plan
         else:
-            current_step, level = self._memory.get_current_plan_step(timestamp)   
-
-            if level < max_depth:         
+            parent_plan, level = self._memory.get_current_plan_step(timestamp)                         
+            if (level - 1)  < max_depth:         
                 broad_plan = ""
-                for i, step in enumerate(self._memory.get_broad_plan()):
-                    broad_plan += f"{i}) {step.description}"
-                message = get_decompose_plan_message(broad_plan,current_step.value.description,self._knowledge,memories,timestamp)
+                for i, step in enumerate(self._memory.get_broad_plan(),start=1):
+                    broad_plan += f"{i}) {step.description} "
+                message = get_decompose_plan_message(broad_plan.strip(),parent_plan.value.description,self._knowledge,memories,timestamp)
 
-        if message is not None:
+        if message is not None:            
             completion = await self._llm_interface.completion([message], [])
             plan_steps = format_plan(completion.content)
 
-            for step in plan_steps:
-                print(step)
+            for step in plan_steps:                
                 ts = GameStage.from_time(step["time"])
                 desc = step["step"]
                 
-                await self.add_memory(Memory(description=desc,type=MemoryType.plan,timestamp=ts))
+                plan_memory = Memory(description=desc,type=MemoryType.plan,timestamp=ts)
+                await self._memory.add_plan_step(plan_memory,parent_plan)                
 
 
     async def query(self, queries: List[str]) -> List[int]:

@@ -327,7 +327,7 @@ Today is {timestamp.get_day()}. Your broad plan for today is:
 
 def get_decompose_plan_message(broad_plan:str, plan_task:str, knowledge:Knowledge, facts:List[str],timestamp:GameStage):    
     fragment = [
-        """You are roleplaying as a character named {knowledge.agent_def.name}.
+        f"""You are roleplaying as a character named {knowledge.agent_def.name}.
 Description of {knowledge.agent_def.name}: 
 {knowledge.agent_def.description} 
 \n Description of the world you live in: {knowledge.game_description}.
@@ -336,13 +336,13 @@ Description of {knowledge.agent_def.name}:
 
     if knowledge.agent_def.core_facts.strip():
         fragment.append(
-            """{knowledge.agent_def.name} knows the following: 
+            f"""{knowledge.agent_def.name} knows the following: 
 {knowledge.agent_def.core_facts}"""
         )
 
     if facts:
         fragment.append(
-            "{knowledge.agent_def.name} has the following memories: \n{facts}"
+            f"{knowledge.agent_def.name} has the following memories: \n{facts}"
         )
 
     fragment.append(
@@ -353,21 +353,13 @@ Only use the following format:
 2) {{"time": "10:00am","step":"go to work"}}
 
 Your broad plan: {broad_plan}
-List the subtasks when you are doing: {plan_task}
+List the subtasks when you are doing: "{plan_task}"
 1)
 """
     )    
 
-    full_prompt = "\n\n".join(
-        [
-            piece.format(
-                knowledge=knowledge, facts="\n".join(facts), current_day=timestamp.get_day(),
-                broad_plan=broad_plan, plan_task=plan_task
-            )
-            for piece in fragment
-        ]
-    )
-
+    full_prompt = "\n\n".join(fragment)
+        
     return Message(role="system", content=full_prompt)
 
 

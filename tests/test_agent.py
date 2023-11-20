@@ -3,10 +3,12 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 from game.agent import Conversation, GenAgent, Knowledge
+from game.memory import GenAgentMemory
 from game.prompt_helpers import (
     generate_functions_from_actions,
     get_action_messages,
     get_chat_messages,
+    get_decompose_plan_message,
     get_interact_messages,
     get_broad_plan_message
 )
@@ -261,38 +263,79 @@ async def test_act():
 
 
 async def test_plan():
-    memory: Any = AsyncMock()
+    retriever: Any = AsyncMock()
     llm: Any = AsyncMock()
     # TODO: this is here because the assert() compares the reference, which gets mutated
     # after; Can we remove this?
     llm.completion = AsyncCopyingMock()
-    memory.add_memory = AsyncCopyingMock()
+    retriever.add_memory = AsyncCopyingMock()
+    memory = GenAgentMemory(llm, 5, retriever)    
 
     agent_def = create_agent_def()
 
     knowledge = Knowledge(
         game_description="Game description", agent_def=agent_def, shared_lore=[],spatial_memory=MemoryTree("spatial_memory.json")
     )
-    agent = await GenAgent.create(knowledge, llm, memory)
     
-    mock_completion = """
+    broad_plan = """
 1) {"time": "10:00am", "step": "go to Oak Hill College to take classes"}
 2) {"time": "1:00pm", "step": "work on his new music composition"}
-3) {"time": "5:30am", "step": "have dinner"}
+3) {"time": "5:30pm", "step": "have dinner"}
 4) {"time": "11:00pm", "step": "finish school assignments and go to bed"}
 """
 
     llm.completion.return_value = Message(
-        role="assistant", content=mock_completion
+        role="assistant", content=broad_plan
     )
  
-    await agent.plan(GameStage())
+    agent = await GenAgent.create(knowledge, llm, memory)    
 
-    llm.completion.assert_called_with(
+    llm.completion.assert_called_once_with(
         [get_broad_plan_message(knowledge,[],GameStage())], 
         []             
     ) 
 
-    memory.add_memory.assert_called_with(
-        Memory(description="finish school assignments and go to bed",type=MemoryType.plan,timestamp=GameStage.from_time("11:00pm"))      
+    generated_plan = memory.get_broad_plan()
+    expected_plan = [
+        Memory(description="go to Oak Hill College to take classes",type=MemoryType.plan, timestamp=GameStage.from_time("10:00am")),
+        Memory(description="work on his new music composition",type=MemoryType.plan, timestamp=GameStage.from_time("1:00pm")),
+        Memory(description="have dinner",type=MemoryType.plan, timestamp=GameStage.from_time("5:30pm")),
+        Memory(description="finish school assignments and go to bed",type=MemoryType.plan, timestamp=GameStage.from_time("11:00pm")),
+    ]
+    assert generated_plan == expected_plan
+
+
+    decomposed_plan = """
+1) {"time": "1:00pm", "step": "think about the mood of the composition"}
+2) {"time": "2:00pm", "step": "look into some melodies"}
+3) {"time": "3:00pm", "step": "come up with interesting rhytm"}
+4) {"time": "4:00pm", "step": "think about additional chord changes to be not like everyone else"}
+"""
+
+    llm.completion.return_value = Message(
+        role="assistant", content=decomposed_plan
     )
+
+    seconds = 7 * 60 * 60 # simulate 7 hours of gametime - should hit the second plan step
+    await agent.plan(GameStage(minor=seconds))
+
+    plan = "1) go to Oak Hill College to take classes 2) work on his new music composition 3) have dinner 4) finish school assignments and go to bed"
+
+    llm.completion.assert_called_with(
+        [get_decompose_plan_message(plan,"work on his new music composition",knowledge,[],GameStage(minor=seconds))], 
+        []             
+    )
+
+
+    second_step = memory._plan.children[1] # check if second step contains memories
+    # print(memory._plan)
+    expected_plan = [
+        Memory(description="think about the mood of the composition",type=MemoryType.plan, timestamp=GameStage.from_time("1:00pm")),
+        Memory(description="look into some melodies",type=MemoryType.plan, timestamp=GameStage.from_time("2:00pm")),
+        Memory(description="come up with interesting rhytm",type=MemoryType.plan, timestamp=GameStage.from_time("3:00pm")),
+        Memory(description="think about additional chord changes to be not like everyone else",type=MemoryType.plan, timestamp=GameStage.from_time("4:00pm")),
+    ]
+    assert [s.value for s in second_step.children] == expected_plan
+
+
+

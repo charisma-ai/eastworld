@@ -1,4 +1,5 @@
 import logging
+import bisect
 from typing import Dict, List, Optional, Tuple
 
 from game.ti_retriever import TIRetriever
@@ -31,21 +32,28 @@ class GenAgentMemory:
         self._plan = PlanTree()
         self._current_plan_step = None
 
-    async def get_broad_plan(self) -> List[Memory]:        
+    def get_broad_plan(self) -> List[Memory]:        
         return [step.value for step in self._plan.children if step.value]
 
-    async def get_current_plan_step(self, timestamp: GameStage) -> Tuple[PlanTree, int]:
+    def get_current_plan_step(self, timestamp: GameStage) -> Tuple[PlanTree, int]:
 
         def _traverse_tree(plan:PlanTree, level:int=0) -> Tuple[PlanTree, int]:
-            if len(plan.children) != 0:
+            if len(plan.children) != 0:                
                 for step in plan.children[::-1]:
-                    if step.value and timestamp < step.value.timestamp:
+                    if step.value and timestamp > step.value.timestamp:
                         return _traverse_tree(step,level=level+1)
             return plan, level
 
         plan_step, level = _traverse_tree(self._plan)
         return plan_step, level
         
+        
+    async def add_plan_step(self, memory: Memory, parent:PlanTree) -> None:
+        assert memory.type == MemoryType.plan        
+        bisect.insort(parent.children,PlanTree(value=memory,parent=parent),key=lambda x: x.value.timestamp)
+
+        # TODO: add memory preprocessing        
+        await self.add_memory(memory)
 
     async def add_memory(self, memory: Memory) -> None:
         # TODO: parallelize
